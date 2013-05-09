@@ -60,10 +60,10 @@ function findPts(LatLng) {
   var legDist = scale*dist/(2+2*Math.sin(phi/2));
   alert(legDist);
   var r = 4000*Math.cos(Lat1); //horizontal radius at given latitude
-  var Lat2 = 1/3*legDist*Math.cos(theta)/4000+Lat1; // 1/3 for first third of route
-  var Long2 = Long1+1/3*legDist*Math.sin(theta)/r;
-  var Lat3 = 1/3*legDist*Math.cos(theta+sign*phi)/4000+Lat1; // 1/3 for first third of route
-  var Long3 = Long1+1/3*legDist*Math.sin(theta+sign*phi)/r;
+  var Lat2 = legDist*Math.cos(theta)/4000+Lat1; // 1/3 for first third of route
+  var Long2 = Long1+legDist*Math.sin(theta)/r;
+  var Lat3 = legDist*Math.cos(theta+sign*phi)/4000+Lat1; // 1/3 for first third of route
+  var Long3 = Long1+legDist*Math.sin(theta+sign*phi)/r;
   var LatLng2 = new google.maps.LatLng(Lat2*180/Math.PI, Long2*180/Math.PI);
   var LatLng3 = new google.maps.LatLng(Lat3*180/Math.PI, Long3*180/Math.PI);
   // var marker= new google.maps.Marker({ map:map, position:LatLng2 });
