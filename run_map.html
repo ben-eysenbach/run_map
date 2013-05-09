@@ -57,7 +57,7 @@ function findPts(LatLng) {
   var phi = 1/3*Math.PI; //angle between leg1 and leg3
   var sign = 2*Math.round(Math.random())-1; //shift right or left
   var scale = 0.8; //straitline_distance/actual_distance
-  alert(Math.cos(phi));
+  alert(2*(1-Math.cos(phi)));
   var legDist = scale*Math.sqrt(c*c/(2*(1-Math.cos(phi))));
   var r = 4000*Math.cos(Lat1); //horizontal radius at given latitude
   var Lat2 = 1/3*legDist*Math.cos(theta)/4000+Lat1; // 1/3 for first third of route
