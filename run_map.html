@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<style type="text/css"> 
+  html { height: 100% }
+  body { height: 100%; margin: 0px; padding: 5px }
+  #googleMap { height: 100% }
+</style> 
+
+
+<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDadqq4rG3XNyc7HZZYrw8GH4CsFcV49bk&sensor=false">
+</script>
+
+<script type="text/javascript">
+var map;
+var directionsDisplay;
+var directionsService = new google.maps.DirectionsService();
+  
+
+function initialize() {
+  directionsDisplay = new google.maps.DirectionsRenderer({draggable:true});
+  var mapProp = {
+    center: new google.maps.LatLng(42.3584308, -71.0597732),
+    zoom: 12,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+  map = new google.maps.Map(document.getElementById("googleMap"), mapProp);
+  directionsDisplay.setMap(map);
+}
+
+function geocodeStart() {
+  var geocoder=new google.maps.Geocoder();
+  var location=document.getElementById("location").value;
+  var GeoReq={ address:location };
+  geocoder.geocode(GeoReq, handleResults);  
+}
+
+function handleResults(results, status) {
+  if (status == google.maps.GeocoderStatus.OK) {
+    var LatLng=results[0].geometry.location;
+    map.setCenter(LatLng);
+    // var marker=new google.maps.Marker({ map:map, position:LatLng });
+    findPts(LatLng);
+    }
+  else {
+    alert("Geocoding was unsuccessful because: " + status);
+    }
+
+}
+
+function findPts(LatLng) {
+  var Lat1 = LatLng.lat()*Math.PI/180; //LatLong in degrees; trig in radians
+  var Long1 = LatLng.lng()*Math.PI/180;
+  var theta = 2*Math.random()*Math.PI;
+  var dist=document.getElementById("distance").value;
+  var phi = 1/3*Math.PI; //angle between leg1 and leg3
+  var r = 4000*Math.cos(Lat1); //horizontal radius at given latitude
+  var Lat2 = 1/3*dist*Math.cos(theta)/4000+Lat1; // 1/3 for first third of route
+  var Long2 = Long1+1/3*dist*Math.sin(theta)/r;
+  var Lat3 = 1/3*dist*Math.cos(theta+phi)/4000+Lat1; // 1/3 for first third of route
+  var Long3 = Long1+1/3*dist*Math.sin(theta+phi)/r;
+  var LatLng2 = new google.maps.LatLng(Lat2*180/Math.PI, Long2*180/Math.PI);
+  var LatLng3 = new google.maps.LatLng(Lat3*180/Math.PI, Long3*180/Math.PI);
+  // var marker= new google.maps.Marker({ map:map, position:LatLng2 });
+  // var marker= new google.maps.Marker({ map:map, position:LatLng3 });
+  plotRoute(LatLng, LatLng2, LatLng3);
+}
+
+function plotRoute(LatLng1, LatLng2, LatLng3) {
+  var request = {
+    origin: LatLng1,
+    destination: LatLng1,
+    waypoints: [
+      {
+        location: LatLng2,
+        stopover: false
+      },
+      {
+        location: LatLng3,
+        stopover: false
+      }],
+    travelMode: google.maps.TravelMode.WALKING,
+    avoidHighways: true
+    };
+  directionsService.route(request, function(result, status) {
+    if (status == google.maps.DirectionsStatus.OK) {
+      directionsDisplay.setDirections(result);
+      var routeDistance = result.routes[0].legs[0].distance.text;
+      document.getElementById("routeDistance").innerHTML=routeDistance
+    }
+  });
+}
+  
+  
+
+google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+</head>
+
+<body>
+
+<a style="position:absolute; right: 10px" href="https://github.com/you">Fork on Github</a>
+
+<div>
+Location<input id="location" style="width:400px" type="textbox" value="Boston, MA">
+Minimum Distance(mi)<input style="width:30px"id="distance" type="number" min=0 value=5>
+<input type="button" value="submit" onclick="geocodeStart()">
+Route Distance: <span id="routeDistance"></span></div>
+
+<div id="googleMap"></div> <!-- style="width:1000px; height:500px;"></div>-->
+
+
+</body>
+</html>
