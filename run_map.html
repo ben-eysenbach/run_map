@@ -23,6 +23,7 @@ var LatLng1;
 var LatLng2;
 var LatLng3;
 var movedPt;
+var mode; //mode of transportation
 
   
 
@@ -35,13 +36,17 @@ function initialize() {
     };
   map = new google.maps.Map(document.getElementById("googleMap"), mapProp);
   directionsDisplay.setMap(map);
-  google.maps.event.addListener(directionsDisplay, 'directions_changed', calcDist);
+  google.maps.event.addListener(directionsDisplay, 'directions_changed', function () {
+    var routeDist = directionsDisplay.directions.routes[0].legs[0].distance.text;
+    document.getElementById("routeDistance").innerHTML = routeDist;
+  });
 }
 
 function submit() {
   movedPt = false;
   counter = 0;
   tolerance = 0.1;
+  mode = google.maps.TravelMode.BICYCLING;
   var geocoder=new google.maps.Geocoder();
   var location=document.getElementById("location").value;
   var GeoReq={ address:location };
@@ -89,7 +94,7 @@ function plotRoute() {
         location: LatLng3,
         stopover: false
       }],
-    travelMode: google.maps.TravelMode.BICYCLING,
+    travelMode: mode,
     avoidHighways: true,
     optimizeWaypoints: true
     };
@@ -106,23 +111,27 @@ function plotRoute() {
         var routeDist = result.routes[0].legs[0].distance.text;
         document.getElementById("routeDistance").innerHTML = routeDist;
       }
-      if (movedPt==false) {
+      if (movedPt==false) { //remove short turns at end
         movePtToRd(result);
         movedPt = true;
         plotRoute();
       }
-      if (counter>10) {
+      if (counter==10) {
         document.getElementById("allowUTurns").checked=true;
         alert("Unable to find a route without U-Turns after 10 attempts.\n"
           +"To keep trying, deselect [Allow U-Turns] and press [map] again.\n");
       }
-      else if (hasUTurn(result)&&!(document.getElementById("allowUTurns").checked)) {
+      if (hasUTurn(result)&&!(document.getElementById("allowUTurns").checked)&&counter<10) {
         moveUTurn(result);
         tolerance *= 1.1; //increase tolerance to ensure eventually will get route
         counter += 1;
         plotRoute();
       }
       directionsDisplay.setDirections(result);
+    }
+    else {
+      mode = google.maps.TravelMode.WALKING; //assume error was because google doesn't support bike directions
+      plotRoute();                           //in requested country
     }
   });
 }
@@ -175,7 +184,7 @@ function findGoodLatLng(result) {
   var steps = result.routes[0].legs[0].steps;
   for (var i=0; i<steps.length; i++) {
     if (steps[i].instructions.indexOf("U-turn") != -1) {
-      return steps[i-2].start_location;
+      return steps[i-Math.floor(steps.length/10)].start_location;
       break;
     }
   }
@@ -199,8 +208,8 @@ function movePtToRd(result) {
       bestStep2 = i;
     }
   }
-  LatLng2 = steps[bestStep1-1].start_location;
-  LatLng3 = steps[bestStep2-1].start_location;
+  LatLng2 = steps[bestStep1-Math.floor(steps.length/10)].start_location;
+  LatLng3 = steps[bestStep2-Math.floor(steps.length/10)].start_location;
 }
 
 
