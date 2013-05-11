@@ -17,12 +17,12 @@
 var map;
 var directionsDisplay;
 var directionsService = new google.maps.DirectionsService();
-var initialTolerance = 0.1; //used to reset tolerance
-var tolerance = initialTolerance; //remap if route is too short or too long
+var tolerance; //remap if route is too short or too long
 var counter = 0; //number of remaps because of UTurns
 var LatLng1;
 var LatLng2;
 var LatLng3;
+var movedPt;
 
   
 
@@ -39,6 +39,9 @@ function initialize() {
 }
 
 function submit() {
+  movedPt = false;
+  counter = 0;
+  tolerance = 0.1;
   var geocoder=new google.maps.Geocoder();
   var location=document.getElementById("location").value;
   var GeoReq={ address:location };
@@ -86,7 +89,7 @@ function plotRoute() {
         location: LatLng3,
         stopover: false
       }],
-    travelMode: google.maps.TravelMode.WALKING,
+    travelMode: google.maps.TravelMode.BICYCLING,
     avoidHighways: true,
     optimizeWaypoints: true
     };
@@ -100,26 +103,24 @@ function plotRoute() {
         plotRoute();
       }
       else {
-        tolerance = initialTolerance;
         var routeDist = result.routes[0].legs[0].distance.text;
         document.getElementById("routeDistance").innerHTML = routeDist;
       }
-      
+      if (movedPt==false) {
+        movePtToRd(result);
+        movedPt = true;
+        plotRoute();
+      }
       if (counter>10) {
         document.getElementById("allowUTurns").checked=true;
         alert("Unable to find a route without U-Turns after 10 attempts.\n"
           +"To keep trying, deselect [Allow U-Turns] and press [map] again.\n");
-        counter=0;
-        tolerance = initialTolerance;
       }
-      if (hasUTurn(result)&&counter<=10&&!(document.getElementById("allowUTurns").checked)) {
+      else if (hasUTurn(result)&&!(document.getElementById("allowUTurns").checked)) {
         moveUTurn(result);
         tolerance *= 1.1; //increase tolerance to ensure eventually will get route
         counter += 1;
         plotRoute();
-      }
-      else {
-        tolerance = initialTolerance;
       }
       directionsDisplay.setDirections(result);
     }
@@ -132,7 +133,9 @@ function showDirections() {
   var steps = directionsDisplay.directions.routes[0].legs[0].steps;
   var uniqueSteps = [];
   for (var i=0; i<steps.length; i++) {
-    if (steps[i] != uniqueSteps[uniqueSteps.length] && steps[i].instructions.split(" ").length>2) {
+    if (steps[i].instructions != uniqueSteps[uniqueSteps.length]
+        && steps[i].instructions.split(" ").length>2
+        && steps[i].instructions.indexOf('bicycle')==-1) {
       uniqueSteps.push(steps[i].instructions+": "+steps[i].distance.text);
     }
   }
@@ -178,6 +181,30 @@ function findGoodLatLng(result) {
   }
 }
 
+function movePtToRd(result) {
+  var steps = result.routes[0].legs[0].steps;
+  var minDist1 = 10; //actually dist^2
+  var minDist2 = 10;
+  var bestStep1;
+  var bestStep2;
+  for (var i=0; i<steps.length; i++) {
+    var dist1 = Math.pow(LatLng2.lat()-steps[i].start_location.lat(),2)
+                +Math.pow(LatLng2.lng()-steps[i].start_location.lng(),2);
+    var dist2 = Math.pow(LatLng3.lat()-steps[i].start_location.lat(),2)
+                +Math.pow(LatLng3.lng()-steps[i].start_location.lng(),2);
+    if (dist1 < minDist1) {
+      bestStep1 = i;
+    }
+    if (dist2 < minDist2) {
+      bestStep2 = i;
+    }
+  }
+  LatLng2 = steps[bestStep1-1].start_location;
+  LatLng3 = steps[bestStep2-1].start_location;
+}
+
+
+  
 google.maps.event.addDomListener(window, 'load', initialize);
 
 
