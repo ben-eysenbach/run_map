@@ -7,7 +7,6 @@
   body { height: 100%; margin: 0px; padding: 5px }
   #googleMap { height: 90%; margin: 5px }
   input { margin: 3px }
-  #phi:hover {
 </style> 
 
 
@@ -18,6 +17,8 @@
 var map;
 var directionsDisplay;
 var directionsService = new google.maps.DirectionsService();
+var initialTolerance = 0.5; //used to reset tolerance
+var tolerance = initialTolerance; //remap if route is too short or too long
 
   
 
@@ -54,23 +55,23 @@ function handleResults(results, status) {
 function findPts(LatLng) {
   var Lat1 = LatLng.lat()*Math.PI/180; //LatLong in degrees; trig in radians
   var Long1 = LatLng.lng()*Math.PI/180;
-  var theta = 2*Math.random()*Math.PI;
   var dist = document.getElementById("distance").value;
   var phi = Math.PI/180*document.getElementById("phi").value; //angle between leg1 and leg3
-  var sign = 2*Math.round(Math.random())-1; //shift right or left
   var scale = 0.8; //straitline_distance/actual_distance
   var legDist = scale*dist/(2+2*Math.sin(phi/2));
   var r = 4000*Math.cos(Lat1); //horizontal radius at given latitude
+  var theta = 2*Math.random()*Math.PI;
   var Lat2 = legDist*Math.cos(theta)/4000+Lat1;
   var Long2 = Long1+legDist*Math.sin(theta)/r;
-  var Lat3 = legDist*Math.cos(theta+sign*phi)/4000+Lat1;
-  var Long3 = Long1+legDist*Math.sin(theta+sign*phi)/r;
+  var Lat3 = legDist*Math.cos(theta+phi)/4000+Lat1;
+  var Long3 = Long1+legDist*Math.sin(theta+phi)/r;
   var LatLng2 = new google.maps.LatLng(Lat2*180/Math.PI, Long2*180/Math.PI);
   var LatLng3 = new google.maps.LatLng(Lat3*180/Math.PI, Long3*180/Math.PI);
   plotRoute(LatLng, LatLng2, LatLng3);
 }
 
 function plotRoute(LatLng1, LatLng2, LatLng3) {
+  alert('ploting');
   var request = {
     origin: LatLng1,
     destination: LatLng1,
@@ -90,20 +91,30 @@ function plotRoute(LatLng1, LatLng2, LatLng3) {
   directionsService.route(request, function(result, status) {
     if (status == google.maps.DirectionsStatus.OK) {
       directionsDisplay.setDirections(result);
+      moveUTurn(LatLng2, LatLng3);
     }
   });
 }
-  
-function calcDist() {
+
+function calcDist() { //write routeDist to html and remap if too long or too short
   var routeDist = directionsDisplay.directions.routes[0].legs[0].distance.text;
+  var routeDistFt = directionsDisplay.directions.routes[0].legs[0].distance.value;
+  var dist = 1609 * document.getElementById("distance").value; //convert to ft
+  if (Math.abs(routeDistFt-dist)/dist > tolerance) {
+    tolerance *= 1.1; //increase tolerance to ensure eventually will get route
+    geocodeStart();
+  }
+  else {
+    tolerance = initialTolerance;
+  }
   document.getElementById("routeDistance").innerHTML = routeDist;
 }
 
 function showDirections() {
   var openWindow = window.open("", "", "width=400, height=600");
-  var steps = directionsDisplay.directions.routes[0].legs[0].steps
-  var uniqueSteps = []
-  for (var i=0; i<steps.length-1; i++) {
+  var steps = directionsDisplay.directions.routes[0].legs[0].steps;
+  var uniqueSteps = [];
+  for (var i=0; i<steps.length; i++) {
     if (steps[i] != uniqueSteps[uniqueSteps.length] && steps[i].instructions.split(" ").length>2) {
       uniqueSteps.push(steps[i].instructions+": "+steps[i].distance.text);
     }
@@ -112,6 +123,46 @@ function showDirections() {
   var routeDist = document.getElementById("routeDistance").innerHTML;
   openWindow.document.write("<br><br>Total: "+routeDist);
   openWindow.focus();
+}
+
+function moveUTurn(LatLng2, LatLng3) {
+  while (hasUTurn()) {
+    var newWaypt = findGoodLatLng();
+    var marker = new google.maps.Marker({position:newWaypt, map:map, title:"hi"});
+    // no sqrt below b/c x^2>y^2 -> x>y
+    var dist2 = Math.pow(LatLng2.lat()-newWaypt.lat(),2)+Math.pow(LatLng2.lng()-newWaypt.lng(),2);
+    var dist3 = Math.pow(LatLng3.lat()-newWaypt.lat(),2)+Math.pow(LatLng3.lng()-newWaypt.lng(),2);
+    alert('remapping');
+    if (dist2<dist3) {
+      plotRoute(LatLng, newWaypt, LatLng3);
+    }
+    else {
+      plotRoute(LatLng, LatLng2, newWaypt);
+    }
+  }
+}
+
+function hasUTurn() {
+  var ok = false;
+  var steps = directionsDisplay.directions.routes[0].legs[0].steps;
+  for (var i=0; i<steps.length; i++) {
+    if (steps[i].instructions.indexOf("U-turn") != -1) {
+      ok=true;
+      break;
+    }
+  }
+  return ok;
+}
+
+function findGoodLatLng() {
+  var steps = directionsDisplay.directions.routes[0].legs[0].steps;
+  for (var i=0; i<steps.length; i++) {
+    if (steps[i].instructions.indexOf("U-turn") != -1) {
+      return steps[i-1].start_location;
+      break;
+    }
+  }
+  return "no u turn";
 }
 
 google.maps.event.addDomListener(window, 'load', initialize);
@@ -133,7 +184,7 @@ Angle<input id="phi" style="width:50px" type="number" min=0 max=180 value=60>
 <input type="button" value="map" onclick="geocodeStart()"></div>
 <div>
 Route Distance: <span id="routeDistance"></span>
-<input style="position:absolute; right:300px" type="button" value="show directions" onclick="showDirections()">
+<input style="position:absolute; right:10px" type="button" value="show directions" onclick="showDirections()">
 </div>
 </div>
 
