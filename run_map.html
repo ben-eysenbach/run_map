@@ -22,8 +22,9 @@ var counter = 0; //number of remaps because of UTurns
 var LatLng1;
 var LatLng2;
 var LatLng3;
-var movedPt;
+var smooth_bool; //has route been smoothed
 var mode; //mode of transportation
+var reason = [0,0,0,0,0];
 
   
 
@@ -43,7 +44,6 @@ function initialize() {
 }
 
 function submit() {
-  movedPt = false;
   counter = 0;
   tolerance = 0.1;
   mode = google.maps.TravelMode.BICYCLING;
@@ -64,6 +64,8 @@ function submit() {
 }
 
 function findPts(LatLng) {
+  //alert('finding points');
+  smooth_bool = false;
   LatLng1 = LatLng; //can't do this above because can't modify global variables in anonymous function
   var Lat1 = LatLng1.lat()*Math.PI/180; //LatLong in degrees; trig in radians
   var Long1 = LatLng1.lng()*Math.PI/180;
@@ -81,7 +83,9 @@ function findPts(LatLng) {
   LatLng3 = new google.maps.LatLng(Lat3*180/Math.PI, Long3*180/Math.PI);
 }
 
+
 function plotRoute() {
+  //alert('plotRoute');
   var request = {
     origin: LatLng1,
     destination: LatLng1,
@@ -99,37 +103,63 @@ function plotRoute() {
     optimizeWaypoints: true
     };
   directionsService.route(request, function(result, status) {
+    //alert(status);
     if (status == google.maps.DirectionsStatus.OK) {
       var routeDistFt = result.routes[0].legs[0].distance.value;
       var distFt = 1609 * document.getElementById("distance").value; //convert to ft
-      if (Math.abs(routeDistFt-distFt)/distFt > tolerance) {
+      
+      if ((routeDistFt-distFt)/distFt > tolerance) { //if route is too long, try smoothing
+        //alert('too long, try smoothing');
+        reason[0]+=1;
+        smooth(result);
+        tolerance *= 1.1; //increase tolerance to ensure eventually will get route
+        plotRoute();
+      }
+      else if ((distFt-routeDistFt)/distFt > tolerance) { //if route is too short, find new points
+        //alert('too short, finding new points');
+        reason[1]+=1;
         tolerance *= 1.1; //increase tolerance to ensure eventually will get route
         findPts(LatLng1);
         plotRoute();
       }
-      else {
-        var routeDist = result.routes[0].legs[0].distance.text;
-        document.getElementById("routeDistance").innerHTML = routeDist;
-      }
-      if (movedPt==false) { //remove short turns at end
-        movePtToRd(result);
-        movedPt = true;
+      else if (!(smooth_bool)&&!(smooth(result))) { //remove short turns at end
+        //note: won't evaluate smooth(result) of smooth_bool is true b/c JS has short circuit evaulation
+        //alert('smoothing because haven\'t before');
+        reason[2]+=1;
         plotRoute();
       }
-      if (counter==10) {
+      else if (counter>=10) {
+      reason[3]+=1;
         document.getElementById("allowUTurns").checked=true;
+        counter=0;
         alert("Unable to find a route without U-Turns after 10 attempts.\n"
           +"To keep trying, deselect [Allow U-Turns] and press [map] again.\n");
       }
-      if (hasUTurn(result)&&!(document.getElementById("allowUTurns").checked)&&counter<10) {
-        moveUTurn(result);
+      else if (hasUTurn(result)&&!(document.getElementById("allowUTurns").checked)) {
+        //alert('replotting because has uturn');
+        reason[4]+=1;
         tolerance *= 1.1; //increase tolerance to ensure eventually will get route
         counter += 1;
+        findPts(LatLng1);
         plotRoute();
       }
-      directionsDisplay.setDirections(result);
+      //alert('plotting, mode:'+mode);
+      else {
+        //alert('plotting!');
+        alert(reason);
+        directionsDisplay.setDirections(result);
+      }
+    }
+    else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
+      alert('Query limit reached, waiting 3 seconds');
+      setTimeout(plotRoute, 3000);
+    }
+    else if (status == google.maps.DirectionsStatus.ZERO_RESULTS) {
+        findPts(LatLng1);
+        plotRoute();
     }
     else {
+      alert(status);
       mode = google.maps.TravelMode.WALKING; //assume error was because google doesn't support bike directions
       plotRoute();                           //in requested country
     }
@@ -154,20 +184,6 @@ function showDirections() {
   openWindow.focus();
 }
 
-function moveUTurn(result) {
-  var newWaypt = findGoodLatLng(result);
-  //var marker = new google.maps.Marker({position:newWaypt, map:map, title:"hi"});
-  // no sqrt below b/c x^2>y^2 -> x>y
-  var dist2 = Math.pow(LatLng2.lat()-newWaypt.lat(),2)+Math.pow(LatLng2.lng()-newWaypt.lng(),2);
-  var dist3 = Math.pow(LatLng3.lat()-newWaypt.lat(),2)+Math.pow(LatLng3.lng()-newWaypt.lng(),2);
-  if (dist2<dist3) {
-    LatLng2 = newWaypt;
-  }
-  else {
-    LatLng3 = newWaypt;
-  }
-}
-
 function hasUTurn(result) {
   var ok = false;
   var steps = result.routes[0].legs[0].steps;
@@ -180,36 +196,47 @@ function hasUTurn(result) {
   return ok;
 }
 
-function findGoodLatLng(result) {
-  var steps = result.routes[0].legs[0].steps;
-  for (var i=0; i<steps.length; i++) {
-    if (steps[i].instructions.indexOf("U-turn") != -1) {
-      return steps[i-Math.floor(steps.length/10)].start_location;
-      break;
-    }
-  }
-}
-
-function movePtToRd(result) {
+function smooth(result) {
+  //alert('smoothing');
   var steps = result.routes[0].legs[0].steps;
   var minDist1 = 10; //actually dist^2
   var minDist2 = 10;
   var bestStep1;
   var bestStep2;
   for (var i=0; i<steps.length; i++) {
-    var dist1 = Math.pow(LatLng2.lat()-steps[i].start_location.lat(),2)
-                +Math.pow(LatLng2.lng()-steps[i].start_location.lng(),2);
-    var dist2 = Math.pow(LatLng3.lat()-steps[i].start_location.lat(),2)
-                +Math.pow(LatLng3.lng()-steps[i].start_location.lng(),2);
+    var dist1 = Math.pow(LatLng2.lat()-steps[i].end_location.lat(),2)
+                +Math.pow(LatLng2.lng()-steps[i].end_location.lng(),2);
+    var dist2 = Math.pow(LatLng3.lat()-steps[i].end_location.lat(),2)
+                +Math.pow(LatLng3.lng()-steps[i].end_location.lng(),2);
     if (dist1 < minDist1) {
       bestStep1 = i;
+      minDist1 = dist1;
     }
     if (dist2 < minDist2) {
       bestStep2 = i;
+      minDist2 = dist2;
     }
   }
-  LatLng2 = steps[bestStep1-Math.floor(steps.length/10)].start_location;
-  LatLng3 = steps[bestStep2-Math.floor(steps.length/10)].start_location;
+  a=0; //used to check if any smoothing was needed
+  b=0;
+  while (steps[bestStep1].distance.value<200) {
+    bestStep1 -= 1;
+    a+=1;
+  }
+  while (steps[bestStep2].distance.value<200) {
+    bestStep2 -= 1;
+    b+=1;
+  }
+  //alert('a:b-'+a+':'+b);
+  LatLng2 = steps[bestStep1].end_location;
+  LatLng3 = steps[bestStep2].end_location;
+  smooth_bool=true;
+  if (a==0&&b==0) {
+    return true; //ok to move on
+  }
+  else {
+    return false; //need to plotRoute again
+  }
 }
 
 
@@ -222,9 +249,10 @@ google.maps.event.addDomListener(window, 'load', initialize);
 
 <body>
 <div id="header" style="height:8%">
-
+<!--
 <iframe src="http://ghbtns.com/github-btn.html?user=ben-eysenbach&repo=run_map&type=fork&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="90" height="40" style="position:absolute; right: 10px"></iframe>
+-->
 
 <div>
 Location<input id="location" style="width:300px" type="textbox" value="Cambridge, MA">
