@@ -154,6 +154,7 @@ function plotRoute() {
       else {
         //alert('plotting!');
         //alert(reason);
+        document.getElementById("directions").style.display="inline";
         directionsDisplay.setDirections(result);
       }
     }
@@ -175,17 +176,27 @@ function plotRoute() {
 
 
 function showDirections() {
-  var openWindow = window.open("", "", "width=400, height=600");
+  var openWindow = window.open("", "", "width=500, height=600");
   var steps = directionsDisplay.directions.routes[0].legs[0].steps;
-  var uniqueSteps = [];
-  for (var i=0; i<steps.length; i++) {
-    if (steps[i].instructions != uniqueSteps[uniqueSteps.length]
+  var uniqueSteps = [steps[0]]; //initialize to avoid steps[i-1] --> negative index
+  var instructions = [];
+  var header = "<head><title>Directions</title><body>";
+  
+  for (var i=1; i<steps.length; i++) {
+    if (steps[i] != uniqueSteps[uniqueSteps.length-1]
         && steps[i].instructions.split(" ").length>2
         && steps[i].instructions.indexOf('bicycle')==-1) {
-      uniqueSteps.push(steps[i].instructions+": "+steps[i].distance.text);
+      uniqueSteps.push(steps[i]);
+    }
+    else {
+      uniqueSteps[uniqueSteps.length-1].distance.value += steps[i].distance.value;
     }
   }
-  openWindow.document.write(uniqueSteps.join("<br>"));
+  for (var i=0; i<uniqueSteps.length; i++) {
+    instructions.push(uniqueSteps[i].instructions+": "
+    +(uniqueSteps[i].distance.value/1609).toFixed(2)+" mi");
+  }
+  openWindow.document.write(header+instructions.join("<br>")+"</body>");
   var routeDist = document.getElementById("routeDistance").innerHTML;
   openWindow.document.write("<br><br>Total: "+routeDist);
   openWindow.focus();
@@ -256,21 +267,23 @@ google.maps.event.addDomListener(window, 'load', initialize);
 
 <body>
 <div id="header" style="height:8%">
-<!--
+
 <iframe src="http://ghbtns.com/github-btn.html?user=ben-eysenbach&repo=run_map&type=fork&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="90" height="40" style="position:absolute; right: 10px"></iframe>
--->
+  
 
 <div>
 Location<input id="location" style="width:300px" type="textbox" value="Cambridge, MA">
 Distance (mi)<input id="distance" style="width:50px" type="number" min=0 value=5>
 U-Turns OK<input id="allowUTurns" type="checkbox">
-<input type="button" value="map" onclick="submit()"></div>
+<input type="button" value="map" onclick="submit()">
+<input id="directions" style="display:none" type="button" value="directions" onclick="showDirections()"></div>
+
 <div>
 Angle<input id="phi" style="width:50px" type="number" min=0 max=180 value=60>
 Tolerance<input id="tolerance" style="width:50px" type="number" min=0.01 max=0.5 value=0.15 step=0.01>
 Route Distance: <span id="routeDistance"></span>
-<input style="position:absolute; right:10px" type="button" value="show directions" onclick="showDirections()">
+
 </div>
 </div>
 
