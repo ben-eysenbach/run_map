@@ -174,7 +174,7 @@ function plotRoute() {
   });
 }
 
-/*
+
 function showDirections() {
   var openWindow = window.open("", "", "width=500, height=600");
   var steps = directionsDisplay.directions.routes[0].legs[0].steps;
@@ -197,12 +197,12 @@ function showDirections() {
     +(uniqueSteps[i].distance.value/1609).toFixed(2)+" mi");
   }
 
-  openWindow.document.write(header+instructions.join("<br>")+"</body>");
+  openWindow.document.write(header+"<p>"+instructions.join("</p><p>")+"</p></body>");
   //var routeDist = document.getElementById("routeDistance").innerHTML;
-  //openWindow.document.write("<br><br>Total: "+routeDist);
+  //openWindow.document.write("<p>Total: "+routeDist</p>);
   openWindow.focus();
 }
-*/
+
 function hasUTurn(result) {
   var ok = false;
   var steps = result.routes[0].legs[0].steps;
