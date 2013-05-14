@@ -197,7 +197,7 @@ function showDirections() {
     +(uniqueSteps[i].distance.value/1609).toFixed(2)+" mi");
   }
   var html = header+instructions.join("<br>")+"</body>";
-  openWindow.document.write(html);
+  openWindow.document.write(html); //comment
   var routeDist = document.getElementById("routeDistance").innerHTML;
   openWindow.document.write("<br><br>Total: "+routeDist);
   openWindow.focus();
