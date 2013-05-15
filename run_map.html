@@ -25,6 +25,7 @@ var LatLng3;
 var smooth_bool; //has route been smoothed
 var mode; //mode of transportation, needed to correct international errors
 //var reason;
+var markers = [];
 
   
 
@@ -45,6 +46,7 @@ function initialize() {
 
 function submit() {
   //reason=[0, 0, 0, 0, 0, 0];
+  clearMarkers(); //only necessary if already showing map
   counter = 0;
   tolerance = document.getElementById("tolerance").value;
   mode = google.maps.TravelMode.BICYCLING;
@@ -156,6 +158,8 @@ function plotRoute() {
         //alert(reason);
         document.getElementById("directions").style.display="inline";
         directionsDisplay.setDirections(result);
+        showMarkers();
+        //alert(Object.keys(map));
       }
     }
     else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
@@ -258,6 +262,40 @@ function smooth(result) {
   }
 }
 
+function showMarkers() {
+  if (document.getElementById("markers").checked==true) {
+    var steps = directionsDisplay.directions.routes[0].legs[0].steps;
+    var dist = 0; //distance from last mile marker
+    var mile = 0; //last recorded mile
+    for (var i=0; i<steps.length; i++) {
+      dist += steps[i].distance.value;
+      if (dist>1609) {
+        dist -= 1609;
+        mile += 1;
+        lat = steps[i].start_location.lat()+
+              dist/1609*(steps[i].end_location.lat()-steps[i].start_location.lat());
+        lng = steps[i].start_location.lng()+
+              dist/1609*(steps[i].end_location.lng()-steps[i].start_location.lng());
+        markers.push(new google.maps.Marker({
+        map:map,
+        position:new google.maps.LatLng(lat, lng),
+        icon:"http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld="+mile+"|99B2FF"
+        }));
+      }
+    }
+  }
+  else {
+    clearMarkers();
+  }
+}
+
+function clearMarkers() {
+  for (var i=0; i<markers.length; i++) {
+    markers[i].setMap(null);
+  }
+  markers = [];
+}
+
 
   
 google.maps.event.addDomListener(window, 'load', initialize);
@@ -284,6 +322,7 @@ U-Turns OK<input id="allowUTurns" type="checkbox">
 <div>
 Angle<input id="phi" style="width:50px" type="number" min=0 max=180 value=60>
 Tolerance<input id="tolerance" style="width:50px" type="number" min=0.01 max=0.5 value=0.15 step=0.01>
+Mile Markers<input id="markers" type="checkbox" onclick="showMarkers()">
 Route Distance: <span id="routeDistance"></span>
 
 </div>
