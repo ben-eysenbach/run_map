@@ -266,20 +266,21 @@ function showMarkers() {
   if (document.getElementById("markers").checked==true) {
     var steps = directionsDisplay.directions.routes[0].legs[0].steps;
     var dist = 0; //distance from last mile marker
-    var mile = 0; //last recorded mile
+    var miles = 0;
     for (var i=0; i<steps.length; i++) {
       dist += steps[i].distance.value;
-      if (dist>1609) {
+      while (dist>1609) {
         dist -= 1609;
-        mile += 1;
-        lat = steps[i].start_location.lat()+
-              dist/1609*(steps[i].end_location.lat()-steps[i].start_location.lat());
-        lng = steps[i].start_location.lng()+
-              dist/1609*(steps[i].end_location.lng()-steps[i].start_location.lng());
+        miles += 1;
+        var lat = steps[i].start_location.lat()+
+          dist/1609*(steps[i].end_location.lat()-steps[i].start_location.lat());
+        var lng = steps[i].start_location.lng()+
+          dist/1609*(steps[i].end_location.lng()-steps[i].start_location.lng());
         markers.push(new google.maps.Marker({
         map:map,
-        position:new google.maps.LatLng(lat, lng),
-        icon:"http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld="+mile+"|99B2FF"
+        position:new google.maps.LatLng(lat,lng),
+        icon:"http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld="+
+          (miles+Math.floor(dist/1609))+"|99B2FF"
         }));
       }
     }
@@ -307,21 +308,21 @@ google.maps.event.addDomListener(window, 'load', initialize);
 <body>
 <div id="header" style="height:8%">
 
-<!--
+
 <iframe src="http://ghbtns.com/github-btn.html?user=ben-eysenbach&repo=run_map&type=fork&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="90" height="40" style="position:absolute; right: 10px"></iframe>
--->
+
 
 <div>
 Location<input id="location" style="width:300px" type="textbox" value="Cambridge, MA">
 Distance (mi)<input id="distance" style="width:50px" type="number" min=0 value=5>
-U-Turns OK<input id="allowUTurns" type="checkbox">
 <input type="button" value="map" onclick="submit()">
 <input id="directions" style="display:none" type="button" value="directions" onclick="showDirections()"></div>
 
 <div>
 Angle<input id="phi" style="width:50px" type="number" min=0 max=180 value=60>
 Tolerance<input id="tolerance" style="width:50px" type="number" min=0.01 max=0.5 value=0.15 step=0.01>
+U-Turns<input id="allowUTurns" type="checkbox">
 Mile Markers<input id="markers" type="checkbox" onclick="showMarkers()">
 Route Distance: <span id="routeDistance"></span>
 
