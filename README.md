@@ -2,7 +2,7 @@ Run Map
 ------------
 Automatically generate running loops!
 
-Live site [here](http://htmlpreview.github.io/?https://raw.github.com/ben-eysenbach/run_map/master/run_map.html)
+Live site [here](http://ben_eysenbach.neocities.org/run_map.html)
 
 ![screenshot](https://raw.github.com/ben-eysenbach/run_map/master/Screenshot.png)
 
