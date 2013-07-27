@@ -3,6 +3,8 @@ run_map
 
 Automatically plans a running loop of a given distance.
 
+Check it out [here](http://ben_eysenbach.neocities.org/run_map.html).
+
 ![screenshot](https://raw.github.com/ben-eysenbach/run_map/master/Screenshot.png)
 
 How it Works:
