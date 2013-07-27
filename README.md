@@ -3,7 +3,7 @@ run_map
 
 Automatically plans a running loop of a given distance.
 
-![Alt text](/path/to/img.jpg "Screenshot")
+![screenshot](https://raw.github.com/ben-eysenbach/run_map/master/Screenshot.png)
 
 How it Works:
 ---------
