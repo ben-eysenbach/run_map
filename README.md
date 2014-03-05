@@ -3,7 +3,9 @@ run_map
 
 Automatically plans a running loop of a given distance.
 
-Check it out [here](http://ben_eysenbach.neocities.org/run_map.html).
+Update (3/5/14): I'm currently working out patent issues with the creator of RouteLoops. I have therefore removed the source and demo site. Hopefully it'll be back soon!
+
+<!-- Check it out [here](http://ben_eysenbach.neocities.org/run_map.html). -->
 
 ![screenshot](https://raw.github.com/ben-eysenbach/run_map/master/Screenshot.png)
 
